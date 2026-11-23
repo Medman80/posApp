@@ -1,0 +1,91 @@
+{
+  "name": "pos-business-manager",
+  "version": "1.0.0",
+  "description": "Business Management System - POS & Stock",
+  "main": "src/main/main.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron . --dev",
+    "build": "electron-builder",
+    "build:win": "electron-builder --win",
+    "build:win:signed": "node build/generate-cert.js && electron-builder --win",
+    "build:linux": "electron-builder --linux",
+    "build:mac": "electron-builder --mac",
+    "docker:win": "bash docker-build-win.sh",
+    "generate-cert": "node build/generate-cert.js",
+    "postinstall": "electron-builder install-app-deps"
+  },
+  "dependencies": {
+    "archiver": "^5.3.2",
+    "better-sqlite3": "^9.4.3",
+    "cors": "^2.8.6",
+    "crypto-js": "^4.2.0",
+    "electron-updater": "^6.1.7",
+    "express": "^5.2.1",
+    "extract-zip": "^2.0.1",
+    "multer": "^2.1.1",
+    "node-machine-id": "^1.1.12",
+    "qrcode": "^1.5.4",
+    "xlsx": "^0.18.5"
+  },
+  "devDependencies": {
+    "@electron/rebuild": "^4.0.4",
+    "electron": "^22.3.27",
+    "electron-builder": "^24.13.3"
+  },
+  "build": {
+    "appId": "com.posmanager.app",
+    "productName": "Business Manager POS",
+    "copyright": "Copyright © 2024 Business Manager POS",
+    "asar": true,
+    "asarUnpack": [
+      "**/node_modules/better-sqlite3/**",
+      "**/node_modules/bindings/**",
+      "**/node_modules/file-uri-to-path/**",
+      "**/node_modules/prebuild-install/**",
+      "**/node_modules/node-addon-api/**",
+      "**/node_modules/node-machine-id/**"
+    ],
+    "files": [
+      "src/**/*",
+      "assets/**/*",
+      "!**/node_modules/**/{CHANGELOG.md,README.md,README,readme.md,readme}",
+      "!**/node_modules/**/{test,__tests__,tests,powered-test,example,examples}",
+      "!**/*.{map,ts}"
+    ],
+    "extraResources": [
+      {
+        "from": "src/main/mobile.html",
+        "to": "mobile.html"
+      }
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "assets/icon.ico",
+      "requestedExecutionLevel": "asInvoker",
+      "signingHashAlgorithms": [
+        "sha256"
+      ],
+      "signDlls": false,
+      "verifyUpdateCodeSignature": false
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "installerIcon": "assets/icon.ico",
+      "uninstallerIcon": "assets/icon.ico",
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "include": "build/installer.nsh"
+    },
+    "forceCodeSigning": false
+  }
+}

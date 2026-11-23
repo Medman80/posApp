@@ -1,0 +1,25 @@
+# ─────────────────────────────────────────────────────────
+#  Dockerfile for building Business Manager POS for Windows
+#  Uses electron-builder's official Wine image for cross-compilation
+# ─────────────────────────────────────────────────────────
+
+FROM electronuserland/builder:wine
+
+# Set working directory
+WORKDIR /project
+
+# Copy package files first (for Docker layer caching)
+COPY package.json package-lock.json ./
+
+# Install dependencies with Windows target
+# --platform=win32 ensures native modules are built for Windows
+RUN npm ci --platform=win32 --arch=x64
+
+# Copy the rest of the project
+COPY . .
+
+# Rebuild native modules for the target Electron + Windows
+RUN npx @electron/rebuild --platform=win32 --arch=x64
+
+# Default command: build for Windows
+CMD ["npx", "electron-builder", "--win", "--x64"]

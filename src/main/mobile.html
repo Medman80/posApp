@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title id="pageTitle">إدارة صور المنتجات</title>
+    <script src="/translations.js"></script>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #f0f2f5;
+            color: #1a1a1a;
+        }
+
+        h1,
+        h2 {
+            text-align: center;
+            color: #2c3e50;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        select,
+        button,
+        input[type="file"] {
+            width: 100%;
+            padding: 12px;
+            margin: 10px 0;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+            box-sizing: border-box;
+        }
+
+        button {
+            background: #3498db;
+            color: white;
+            border: none;
+            cursor: pointer;
+            transition: background 0.3s;
+            font-weight: bold;
+        }
+
+        button:hover {
+            background: #2980b9;
+        }
+
+        button.danger {
+            background: #e74c3c;
+            margin-top: 5px;
+        }
+
+        button.danger:hover {
+            background: #c0392b;
+        }
+
+        .camera-btn {
+            background: #2ecc71;
+        }
+
+        .camera-btn:hover {
+            background: #27ae60;
+        }
+
+        .image-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .image-card {
+            position: relative;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .image-card img {
+            width: 100%;
+            height: 120px;
+            object-fit: cover;
+            display: block;
+        }
+
+        .image-card button {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            margin: 0;
+            border-radius: 0;
+            padding: 8px;
+            opacity: 0.9;
+        }
+
+        .loader {
+            text-align: center;
+            padding: 20px;
+            display: none;
+        }
+
+        #productName {
+            text-align: center;
+            font-size: 1.2em;
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #34495e;
+        }
+
+        #fileInput {
+            display: none;
+        }
+
+        .product-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+            gap: 15px;
+        }
+
+        .product-card {
+            background: #fff;
+            padding: 20px 10px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+            cursor: pointer;
+            text-align: center;
+            border: 2px solid transparent;
+            transition: all 0.2s;
+        }
+
+        .product-card:hover,
+        .product-card:active {
+            border-color: #3498db;
+            transform: scale(1.02);
+        }
+
+        .product-card h3 {
+            margin: 0;
+            font-size: 1.1em;
+            color: #2c3e50;
+            font-weight: bold;
+        }
+
+        .search-container {
+            position: relative;
+            margin-bottom: 20px;
+        }
+
+        .search-container input {
+            width: 100%;
+            padding: 14px 40px 14px 14px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+            box-sizing: border-box;
+            outline: none;
+        }
+
+        .search-container input:focus {
+            border-color: #3498db;
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 14px;
+            top: 14px;
+            color: #888;
+            font-size: 18px;
+        }
+
+        html[dir="rtl"] .search-container input {
+            padding: 14px 14px 14px 40px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1 id="mainTitle">إدارة صور المنتجات</h1>
+
+        <div id="selectProductSection">
+            <div class="search-container">
+                <input type="text" id="searchInput" placeholder="بحث عن منتج..." oninput="filterProducts()">
+                <span class="search-icon">🔍</span>
+            </div>
+            <div id="productGrid" class="product-grid">
+                <div id="loadingOption" style="grid-column: 1/-1; text-align: center; padding: 20px;">loading ...</div>
+            </div>
+        </div>
+
+        <div id="productDetailsSection" style="display: none;">
+            <div id="productName"></div>
+            <input type="file" id="fileInput" accept="image/*">
+            <button class="camera-btn" onclick="document.getElementById('fileInput').click()" id="uploadBtn">📸 التقاط
+                أو اختيار صورة</button>
+            <button onclick="backToList()" id="backBtn">🔙 العودة للقائمة</button>
+
+            <h2 id="currentImagesTitle">الصور الحالية</h2>
+            <div id="loader" class="loader" id="loaderText">loading ...</div>
+            <div id="imageGrid" class="image-grid"></div>
+        </div>
+    </div>
+
+    <script>
+        let currentProductId = null;
+        let currentLang = 'fr';
+        let t = {};
+        
+        const localT = {
+            ar: {
+                search_product: 'بحث عن منتج...',
+                capture: '📸 التقاط أو اختيار صورة',
+                back: '🔙 العودة للقائمة',
+                current_images: 'الصور الحالية',
+                no_products: 'لا توجد منتجات',
+                unknown_product: 'منتج غير معروف',
+                no_images: 'لا توجد صور',
+                delete_confirm: 'هل أنت متأكد من حذف هذه الصورة؟',
+                upload_failed: 'فشل رفع الصورة',
+                upload_error: 'حدث خطأ أثناء الرفع',
+                delete_failed: 'فشل حذف الصورة',
+                delete_error: 'حدث خطأ أثناء الحذف',
+                fetch_products_error: 'حدث خطأ في جلب المنتجات',
+                fetch_images_error: 'حدث خطأ في جلب الصور'
+            },
+            fr: {
+                search_product: 'Rechercher un produit...',
+                capture: '📸 Capturer ou sélectionner une image',
+                back: '🔙 Retour à la liste',
+                current_images: 'Images actuelles',
+                no_products: 'Aucun produit',
+                unknown_product: 'Produit inconnu',
+                no_images: 'Aucune image',
+                delete_confirm: 'Êtes-vous sûr de vouloir supprimer cette image ?',
+                upload_failed: 'Échec du téléchargement',
+                upload_error: "Une erreur s'est produite",
+                delete_failed: 'Échec de la suppression',
+                delete_error: 'Erreur lors de la suppression',
+                fetch_products_error: 'Erreur lors de la récupération des produits',
+                fetch_images_error: 'Erreur lors de la récupération des images'
+            },
+            en: {
+                search_product: 'Search for a product...',
+                capture: '📸 Capture or select image',
+                back: '🔙 Back to list',
+                current_images: 'Current images',
+                no_products: 'No products found',
+                unknown_product: 'Unknown product',
+                no_images: 'No images found',
+                delete_confirm: 'Are you sure you want to delete this image?',
+                upload_failed: 'Failed to upload image',
+                upload_error: 'An error occurred during upload',
+                delete_failed: 'Failed to delete image',
+                delete_error: 'An error occurred during deletion',
+                fetch_products_error: 'Error fetching products',
+                fetch_images_error: 'Error fetching images'
+            }
+        };
+
+        function getT() {
+            return localT[currentLang] || localT['fr'];
+        }
+
+        function applyTranslations() {
+            const lt = getT();
+            if (window.translations && window.translations[currentLang]) {
+                t = window.translations[currentLang];
+                document.getElementById('pageTitle').innerText = t.products || 'Products';
+                document.getElementById('mainTitle').innerText = t.products || 'Products';
+                document.getElementById('loadingOption').innerText = t.loading || 'Loading...';
+            }
+            document.getElementById('searchInput').placeholder = lt.search_product;
+            document.getElementById('uploadBtn').innerText = lt.capture;
+            document.getElementById('backBtn').innerText = lt.back;
+            document.getElementById('currentImagesTitle').innerText = lt.current_images;
+            
+            if (currentLang === 'ar') document.body.dir = 'rtl';
+            else document.body.dir = 'ltr';
+        }
+
+        // On load, check if productId is in URL
+        window.onload = () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const langParam = urlParams.get('lang');
+            if (langParam) currentLang = langParam;
+            applyTranslations();
+
+            const pid = urlParams.get('productId');
+            if (pid) {
+                currentProductId = pid;
+                document.getElementById('selectProductSection').style.display = 'none';
+                document.getElementById('productDetailsSection').style.display = 'block';
+                fetchProductDetails(pid);
+                loadImages();
+            } else {
+                loadProducts();
+            }
+        };
+
+        let allProducts = [];
+
+        async function loadProducts() {
+            try {
+                const res = await fetch('/api/products');
+                allProducts = await res.json();
+                renderProductGrid(allProducts);
+            } catch (e) {
+                alert(getT().fetch_products_error);
+            }
+        }
+
+        function filterProducts() {
+            const q = document.getElementById('searchInput').value.toLowerCase();
+            const filtered = allProducts.filter(p => p.name.toLowerCase().includes(q));
+            renderProductGrid(filtered);
+        }
+
+        function renderProductGrid(products) {
+            const grid = document.getElementById('productGrid');
+            if (products.length === 0) {
+                grid.innerHTML = `<div style="grid-column: 1/-1; text-align: center; padding: 20px; color: #888;">${getT().no_products}</div>`;
+                return;
+            }
+            grid.innerHTML = products.map(p => `
+                <div class="product-card" onclick="selectProduct('${p.id}', '${p.name.replace(/'/g, "&apos;")}')">
+                    <h3>${p.name}</h3>
+                </div>
+            `).join('');
+        }
+
+        function selectProduct(id, name) {
+            currentProductId = id;
+            document.getElementById('selectProductSection').style.display = 'none';
+            document.getElementById('productDetailsSection').style.display = 'block';
+            document.getElementById('productName').innerText = name;
+            loadImages();
+        }
+
+        async function fetchProductDetails(id) {
+            try {
+                const res = await fetch(`/api/products/${id}`);
+                const product = await res.json();
+                if (product && product.name) {
+                    document.getElementById('productName').innerText = product.name;
+                } else {
+                    document.getElementById('productName').innerText = getT().unknown_product;
+                }
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        function backToList() {
+            // clear url params
+            window.history.pushState({}, document.title, window.location.pathname);
+            currentProductId = null;
+            document.getElementById('selectProductSection').style.display = 'block';
+            document.getElementById('productDetailsSection').style.display = 'none';
+            if (allProducts.length === 0) {
+                loadProducts();
+            } else {
+                document.getElementById('searchInput').value = '';
+                renderProductGrid(allProducts);
+            }
+        }
+
+        async function loadImages() {
+            if (!currentProductId) return;
+            document.getElementById('loader').style.display = 'block';
+            document.getElementById('imageGrid').innerHTML = '';
+            try {
+                const res = await fetch(`/api/products/${currentProductId}/images`);
+                const images = await res.json();
+                const grid = document.getElementById('imageGrid');
+                if (images.length === 0) {
+                    grid.innerHTML = `<p style="grid-column: 1/-1; text-align:center;">${getT().no_images}</p>`;
+                } else {
+                    images.forEach(img => {
+                        grid.innerHTML += `
+                            <div class="image-card">
+                                <img src="${img.url}" alt="${img.name}">
+                                <button class="danger" onclick="deleteImage('${img.name}')">🗑️ ${t.delete || 'Delete'}</button>
+                            </div>
+                        `;
+                    });
+                }
+            } catch (e) {
+                alert(getT().fetch_images_error);
+            } finally {
+                document.getElementById('loader').style.display = 'none';
+            }
+        }
+
+        document.getElementById('fileInput').addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file || !currentProductId) return;
+
+            const formData = new FormData();
+            formData.append('image', file);
+
+            document.getElementById('loader').style.display = 'block';
+            try {
+                const res = await fetch(`/api/products/${currentProductId}/images`, {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await res.json();
+                if (data.success) {
+                    loadImages();
+                } else {
+                    alert(getT().upload_failed);
+                }
+            } catch (error) {
+                alert(getT().upload_error);
+            } finally {
+                e.target.value = ''; // reset input
+                document.getElementById('loader').style.display = 'none';
+            }
+        });
+
+        async function deleteImage(filename) {
+            if (!confirm(getT().delete_confirm)) return;
+            
+            document.getElementById('loader').style.display = 'block';
+            try {
+                const res = await fetch(`/api/products/${currentProductId}/images/${filename}`, {
+                    method: 'DELETE'
+                });
+                const data = await res.json();
+                if (data.success) {
+                    loadImages();
+                } else {
+                    alert(getT().delete_failed);
+                }
+            } catch (error) {
+                alert(getT().delete_error);
+            } finally {
+                document.getElementById('loader').style.display = 'none';
+            }
+        }
+    </script>
+</body>
+
+</html>
